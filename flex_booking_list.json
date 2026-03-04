@@ -1,0 +1,44 @@
+{
+  "type": "bubble",
+  "size": "mega",
+  "body": {
+    "type": "box",
+    "layout": "vertical",
+    "spacing": "md",
+    "contents": [
+      { "type": "text", "text": "Booking", "weight": "bold", "size": "md" },
+      { "type": "text", "text": "{{booking_no}}", "weight": "bold", "size": "xl", "margin": "sm" },
+      { "type": "separator", "margin": "md" },
+
+      { "type": "text", "text": "Booking Created: {{date_time}}", "size": "sm" },
+      { "type": "text", "text": "Vessel: {{vessel_name}}", "size": "sm" },
+      { "type": "text", "text": "Voyage: {{voyage}}", "size": "sm" },
+      { "type": "text", "text": "Total Containers: {{container_count}}", "size": "sm" }
+    ]
+  },
+  "footer": {
+    "type": "box",
+    "layout": "vertical",
+    "spacing": "sm",
+    "contents": [
+      {
+        "type": "button",
+        "style": "primary",
+        "action": {
+          "type": "uri",
+          "label": "More Details",
+          "uri": "https://online.hutchisonports.co.th/"
+        }
+      },
+      {
+        "type": "button",
+        "style": "secondary",
+        "action": {
+          "type": "postback",
+          "label": "Check Another Booking",
+          "data": "action=booking"
+        }
+      }
+    ]
+  }
+}
