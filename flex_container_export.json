@@ -1,0 +1,155 @@
+{
+  "type": "bubble",
+  "size": "mega",
+  "body": {
+    "type": "box",
+    "layout": "vertical",
+    "spacing": "md",
+    "contents": [
+      {
+        "type": "text",
+        "text": "Container detail",
+        "weight": "bold",
+        "size": "md",
+        "color": "#333333"
+      },
+      {
+        "type": "text",
+        "text": "{{container_no}}",
+        "weight": "bold",
+        "size": "xxl",
+        "margin": "sm",
+        "wrap": true
+      },
+      {
+        "type": "separator",
+        "margin": "md"
+      },
+
+      {
+        "type": "box",
+        "layout": "vertical",
+        "margin": "md",
+        "spacing": "sm",
+        "contents": [
+
+          {
+            "type": "box",
+            "layout": "horizontal",
+            "contents": [
+              { "type": "text", "text": "Sz/Ty/Ht :", "size": "sm", "color": "#777777", "flex": 3 },
+              { "type": "text", "text": "{{size}}", "size": "sm", "weight": "bold", "flex": 5 }
+            ]
+          },
+
+          {
+            "type": "box",
+            "layout": "horizontal",
+            "contents": [
+              { "type": "text", "text": "Category :", "size": "sm", "color": "#777777", "flex": 3 },
+              { "type": "text", "text": "{{category}}", "size": "sm", "weight": "bold", "flex": 5 }
+            ]
+          },
+
+          {
+            "type": "box",
+            "layout": "horizontal",
+            "contents": [
+              { "type": "text", "text": "Status :", "size": "sm", "color": "#777777", "flex": 3 },
+              { "type": "text", "text": "{{status}}", "size": "sm", "weight": "bold", "flex": 5 }
+            ]
+          },
+
+          {
+            "type": "box",
+            "layout": "horizontal",
+            "contents": [
+              { "type": "text", "text": "Location :", "size": "sm", "color": "#777777", "flex": 3 },
+              { "type": "text", "text": "{{location}}", "size": "sm", "weight": "bold", "flex": 5 }
+            ]
+          },
+
+          {
+            "type": "box",
+            "layout": "horizontal",
+            "contents": [
+              { "type": "text", "text": "Vessel :", "size": "sm", "color": "#777777", "flex": 3 },
+              { "type": "text", "text": "{{vessel}}", "size": "sm", "weight": "bold", "flex": 5, "wrap": true }
+            ]
+          },
+
+          {
+            "type": "box",
+            "layout": "horizontal",
+            "contents": [
+              { "type": "text", "text": "Voyage :", "size": "sm", "color": "#777777", "flex": 3 },
+              { "type": "text", "text": "{{voyage}}", "size": "sm", "weight": "bold", "flex": 5 }
+            ]
+          },
+
+          {
+            "type": "box",
+            "layout": "horizontal",
+            "contents": [
+              { "type": "text", "text": "Line :", "size": "sm", "color": "#777777", "flex": 3 },
+              { "type": "text", "text": "{{line}}", "size": "sm", "weight": "bold", "flex": 5 }
+            ]
+          },
+
+          {
+            "type": "box",
+            "layout": "horizontal",
+            "contents": [
+              { "type": "text", "text": "Booking :", "size": "sm", "color": "#777777", "flex": 3 },
+              { "type": "text", "text": "{{booking_no}}", "size": "sm", "weight": "bold", "flex": 5 }
+            ]
+          },
+
+          {
+            "type": "box",
+            "layout": "horizontal",
+            "contents": [
+              { "type": "text", "text": "Home Berthing :", "size": "sm", "color": "#777777", "flex": 3 },
+              { "type": "text", "text": "{{home_berthing}}", "size": "sm", "weight": "bold", "flex": 5 }
+            ]
+          },
+
+          {
+            "type": "box",
+            "layout": "horizontal",
+            "contents": [
+              { "type": "text", "text": "Hold Status :", "size": "sm", "color": "#777777", "flex": 3 },
+              { "type": "text", "text": "{{hold_status}}", "size": "sm", "weight": "bold", "flex": 5 }
+            ]
+          },
+
+          {
+            "type": "box",
+            "layout": "horizontal",
+            "contents": [
+              { "type": "text", "text": "PVB :", "size": "sm", "color": "#777777", "flex": 3 },
+              { "type": "text", "text": "{{pvb}}", "size": "sm", "weight": "bold", "flex": 5, "wrap": true }
+            ]
+          }
+
+        ]
+      }
+    ]
+  },
+
+  "footer": {
+    "type": "box",
+    "layout": "vertical",
+    "contents": [
+      {
+        "type": "button",
+        "style": "secondary",
+        "action": {
+          "type": "postback",
+          "label": "Check another container",
+          "data": "action=container"
+        }
+      }
+    ]
+  }
+}
