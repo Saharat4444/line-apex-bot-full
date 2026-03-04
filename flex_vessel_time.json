@@ -1,0 +1,37 @@
+{
+  "type": "bubble",
+  "size": "mega",
+  "body": {
+    "type": "box",
+    "layout": "vertical",
+    "spacing": "md",
+    "contents": [
+      { "type": "text", "text": "Vessel Schedule", "weight": "bold", "size": "md" },
+      { "type": "text", "text": "{{vessel_name}}", "weight": "bold", "size": "xl", "margin": "sm", "wrap": true },
+      { "type": "separator", "margin": "md" },
+
+      { "type": "text", "text": "Voyage Code: {{voyage_code}}", "size": "sm" },
+      { "type": "text", "text": "Arrives in Terminal: {{terminal}}", "size": "sm" },
+      { "type": "text", "text": "Estimated Arrival: {{eta}}", "size": "sm" },
+      { "type": "text", "text": "Estimated Departure: {{etd}}", "size": "sm" },
+      { "type": "text", "text": "Closing: {{closing_time}}", "size": "sm" },
+      { "type": "text", "text": "Currently in Port: {{currently_in_port}}", "size": "sm" },
+      { "type": "text", "text": "Shipping Agent: {{shipping_agent}}", "size": "sm" }
+    ]
+  },
+  "footer": {
+    "type": "box",
+    "layout": "vertical",
+    "contents": [
+      {
+        "type": "button",
+        "style": "secondary",
+        "action": {
+          "type": "postback",
+          "label": "Check another vessel",
+          "data": "action=vessel"
+        }
+      }
+    ]
+  }
+}

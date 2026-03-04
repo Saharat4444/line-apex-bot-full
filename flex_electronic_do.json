@@ -1,0 +1,47 @@
+{
+  "type": "bubble",
+  "size": "mega",
+  "body": {
+    "type": "box",
+    "layout": "vertical",
+    "spacing": "md",
+    "contents": [
+      { "type": "text", "text": "Electronic D/O", "weight": "bold", "size": "md" },
+      { "type": "text", "text": "{{do_no}}", "weight": "bold", "size": "xl", "margin": "sm" },
+      { "type": "separator", "margin": "md" },
+
+      { "type": "text", "text": "D/O Status: {{do_status}}", "size": "sm" },
+      { "type": "text", "text": "Expiry Date/Time: {{expiry_datetime}}", "size": "sm" },
+      { "type": "text", "text": "B/L No: {{bl_no}}", "size": "sm" },
+      { "type": "text", "text": "Consignee: {{consignee_name}}", "size": "sm" },
+      { "type": "text", "text": "Vessel: {{vessel_name}}", "size": "sm" },
+      { "type": "text", "text": "Voyage: {{voyage}}", "size": "sm" },
+      { "type": "text", "text": "Terminal: {{terminal}}", "size": "sm" }
+    ]
+  },
+  "footer": {
+    "type": "box",
+    "layout": "vertical",
+    "spacing": "sm",
+    "contents": [
+      {
+        "type": "button",
+        "style": "primary",
+        "action": {
+          "type": "uri",
+          "label": "More Details",
+          "uri": "https://online.hutchisonports.co.th/"
+        }
+      },
+      {
+        "type": "button",
+        "style": "secondary",
+        "action": {
+          "type": "postback",
+          "label": "Check Another D/O",
+          "data": "action=do"
+        }
+      }
+    ]
+  }
+}
