@@ -49,12 +49,12 @@ async function logToApex(userId, message, reply) {
    DIALOGFLOW CONFIG
 ===================================================== */
 const authFlex = new GoogleAuth({
-  keyFile: './service-account-FlexCard.json',
+  credentials: JSON.parse(process.env.GOOGLE_CREDENTIALS_FLEX),
   scopes: 'https://www.googleapis.com/auth/dialogflow'
 });
 
 const authFAQ = new GoogleAuth({
-  keyFile: './service-account.json',
+  credentials: JSON.parse(process.env.GOOGLE_CREDENTIALS_FAQ),
   scopes: 'https://www.googleapis.com/auth/dialogflow'
 });
 
