@@ -8,8 +8,6 @@ const { GoogleAuth } = require('google-auth-library');
 const app = express();
 app.use(express.json());
 
-const APEX_URL = process.env.APEX_URL;
-
 /* =====================================================
    LOGGER
 ===================================================== */
@@ -27,22 +25,10 @@ function logError(error) {
 }
 
 /* =====================================================
-   APEX LOGGING
+   APEX LOGGING (ปิดไว้ — Cloudflare จัดการแทน)
 ===================================================== */
 async function logToApex(userId, message, reply) {
-  try {
-    await axios.post(APEX_URL, {
-      user_id:  userId,
-      message:  message,
-      reply:    reply
-    }, {
-      headers: { 'Content-Type': 'application/json' },
-      timeout: 10000
-    });
-  } catch (err) {
-    console.error('APEX Log Error:', err.message);
-    // ไม่ throw เพราะ log error ไม่ควรทำให้ bot พัง
-  }
+  return; // Cloudflare Worker Log ไป APEX แทนแล้ว
 }
 
 /* =====================================================
@@ -63,6 +49,8 @@ const authFAQ = new GoogleAuth({
 ===================================================== */
 async function detectIntent(projectId, authClient, text, sessionId, languageCode) {
   try {
+    log("DIALOGFLOW REQUEST", { projectId, sessionId, languageCode, text });
+
     const client = await authClient.getClient();
     const accessToken = await client.getAccessToken();
 
@@ -77,7 +65,18 @@ async function detectIntent(projectId, authClient, text, sessionId, languageCode
       }
     );
 
-    return response.data.queryResult;
+    log("DIALOGFLOW RAW RESPONSE", response.data);
+
+    const result = response.data.queryResult;
+
+    log("DIALOGFLOW SUMMARY", {
+      intent: result.intent?.displayName,
+      confidence: result.intentDetectionConfidence,
+      fulfillment: result.fulfillmentText,
+      parameters: result.parameters
+    });
+
+    return result;
 
   } catch (err) {
     logError(err);
@@ -152,6 +151,7 @@ app.post('/webhook', async (req, res) => {
     if (event.type === 'postback') {
       const params = new URLSearchParams(event.postback.data);
       const action = params.get("action");
+      console.log("POSTBACK ACTION:", action);
 
       if (action === "container") {
         await replyText(event.replyToken, "กรุณาพิมพ์หมายเลขตู้ เช่น ABCU1234567");
@@ -176,6 +176,8 @@ app.post('/webhook', async (req, res) => {
         await logToApex(sessionId, rawText, 'รูปแบบหมายเลขตู้ไม่ถูกต้อง');
         return res.sendStatus(200);
       }
+
+      log("CONTAINER DETECTED", containerNo);
 
       let templateFile, mockData;
 
@@ -212,11 +214,17 @@ app.post('/webhook', async (req, res) => {
       return res.sendStatus(200);
     }
 
-    // --- Dialogflow ---
+    // --- Dialogflow Flex/Container ---
     const cluResult = await detectIntent(
       "project-chatbot-oacy", authFlex,
       rawText, sessionId, "en"
     );
+
+    log("CLU RESULT", {
+      intent: cluResult.intent?.displayName,
+      confidence: cluResult.intentDetectionConfidence,
+      fulfillment: cluResult.fulfillmentText
+    });
 
     if (cluResult.intentDetectionConfidence >= 0.6 && cluResult.fulfillmentText) {
       await replyText(event.replyToken, cluResult.fulfillmentText);
@@ -224,10 +232,17 @@ app.post('/webhook', async (req, res) => {
       return res.sendStatus(200);
     }
 
+    // --- Dialogflow FAQ ---
     const faqResult = await detectIntent(
       "project-chatbot-faqs-hpqt", authFAQ,
       rawText, sessionId, "th"
     );
+
+    log("FAQ RESULT", {
+      intent: faqResult.intent?.displayName,
+      confidence: faqResult.intentDetectionConfidence,
+      fulfillment: faqResult.fulfillmentText
+    });
 
     const faqAnswer = faqResult.fulfillmentText || "ไม่พบข้อมูลที่เกี่ยวข้อง";
     await replyText(event.replyToken, faqAnswer);
@@ -241,5 +256,5 @@ app.post('/webhook', async (req, res) => {
 });
 
 app.listen(process.env.PORT || 3000, () => {
-  console.log("🚀 Bot running");
+  console.log("🚀 Hybrid Bot (Flex + FAQ) running on port 3000");
 });
