@@ -1,8 +1,6 @@
 require('dotenv').config();
 const express = require('express');
 const axios = require('axios');
-const fs = require('fs');
-const path = require('path');
 const { GoogleAuth } = require('google-auth-library');
 
 const app = express();
@@ -28,7 +26,7 @@ function logError(error) {
    APEX LOGGING (ปิดไว้ — Cloudflare จัดการแทน)
 ===================================================== */
 async function logToApex(userId, message, reply) {
-  return; // Cloudflare Worker Log ไป APEX แทนแล้ว
+  return;
 }
 
 /* =====================================================
@@ -51,7 +49,7 @@ async function detectIntent(projectId, authClient, text, sessionId, languageCode
   try {
     log("DIALOGFLOW REQUEST", { projectId, sessionId, languageCode, text });
 
-    const client = await authClient.getClient();
+    const client      = await authClient.getClient();
     const accessToken = await client.getAccessToken();
 
     const response = await axios.post(
@@ -70,10 +68,10 @@ async function detectIntent(projectId, authClient, text, sessionId, languageCode
     const result = response.data.queryResult;
 
     log("DIALOGFLOW SUMMARY", {
-      intent: result.intent?.displayName,
-      confidence: result.intentDetectionConfidence,
+      intent:      result.intent?.displayName,
+      confidence:  result.intentDetectionConfidence,
       fulfillment: result.fulfillmentText,
-      parameters: result.parameters
+      parameters:  result.parameters
     });
 
     return result;
@@ -85,47 +83,12 @@ async function detectIntent(projectId, authClient, text, sessionId, languageCode
 }
 
 /* =====================================================
-   HELPERS
-===================================================== */
-function isValidContainer(container) {
-  return /^[A-Z]{4}[0-9]{7}$/.test(container);
-}
-
-function injectData(template, data) {
-  let jsonStr = JSON.stringify(template);
-  Object.keys(data).forEach(key => {
-    jsonStr = jsonStr.replace(new RegExp(`{{${key}}}`, "g"), data[key]);
-  });
-  return JSON.parse(jsonStr);
-}
-
-/* =====================================================
    LINE REPLY
 ===================================================== */
 async function replyText(replyToken, text) {
   await axios.post(
     "https://api.line.me/v2/bot/message/reply",
     { replyToken, messages: [{ type: "text", text }] },
-    {
-      headers: {
-        Authorization: `Bearer ${process.env.LINE_CHANNEL_ACCESS_TOKEN}`,
-        "Content-Type": "application/json"
-      }
-    }
-  );
-}
-
-async function replyFlex(replyToken, flexJson) {
-  await axios.post(
-    "https://api.line.me/v2/bot/message/reply",
-    {
-      replyToken,
-      messages: [{
-        type: "flex",
-        altText: "Container Result",
-        contents: flexJson
-      }]
-    },
     {
       headers: {
         Authorization: `Bearer ${process.env.LINE_CHANNEL_ACCESS_TOKEN}`,
@@ -147,18 +110,8 @@ app.post('/webhook', async (req, res) => {
 
     const sessionId = event.source.userId;
 
-    // --- Postback ---
-    if (event.type === 'postback') {
-      const params = new URLSearchParams(event.postback.data);
-      const action = params.get("action");
-      console.log("POSTBACK ACTION:", action);
-
-      if (action === "container") {
-        await replyText(event.replyToken, "กรุณาพิมพ์หมายเลขตู้ เช่น ABCU1234567");
-        await logToApex(sessionId, '[POSTBACK:container]', 'กรุณาพิมพ์หมายเลขตู้');
-      }
-      return res.sendStatus(200);
-    }
+    // Postback — Cloudflare จัดการแทนแล้ว
+    if (event.type === 'postback') return res.sendStatus(200);
 
     if (event.type !== 'message' || event.message.type !== 'text')
       return res.sendStatus(200);
@@ -166,63 +119,15 @@ app.post('/webhook', async (req, res) => {
     const rawText = event.message.text.trim().toUpperCase();
     log("USER TEXT", rawText);
 
-    // --- Container ---
-    const containerMatch = rawText.match(/[A-Z]{4}[0-9]{7}/);
-    if (containerMatch) {
-      const containerNo = containerMatch[0];
-
-      if (!isValidContainer(containerNo)) {
-        await replyText(event.replyToken, "รูปแบบหมายเลขตู้ไม่ถูกต้อง");
-        await logToApex(sessionId, rawText, 'รูปแบบหมายเลขตู้ไม่ถูกต้อง');
-        return res.sendStatus(200);
-      }
-
-      log("CONTAINER DETECTED", containerNo);
-
-      let templateFile, mockData;
-
-      if (containerNo.startsWith("ABCU")) {
-        templateFile = "flex_container_import.json";
-        mockData = {
-          container_no: containerNo,
-          category: "IMPORT", size: "20/DR", status: "Full",
-          location: "YARD", vessel: "OOCL America OAE", voyage: "190N",
-          line: "WHL", bill: "IMP112233", booking_no: "-",
-          home_berthing: "C1C2", hold_status: "None",
-          pvb: "26-JAN-2026 23:59:59"
-        };
-      } else if (containerNo.startsWith("DEFU")) {
-        templateFile = "flex_container_export.json";
-        mockData = {
-          container_no: containerNo,
-          category: "EXPORT", size: "40/HC", status: "Loaded",
-          location: "PORT", vessel: "OOCL Hong Kong", voyage: "220E",
-          line: "WHL", bill: "EXP998877", booking_no: "BK-EXP-001",
-          home_berthing: "A3", hold_status: "None",
-          pvb: "15-FEB-2026 18:00:00"
-        };
-      } else {
-        await replyText(event.replyToken, "รองรับเฉพาะ ABCU / DEFU เท่านั้น");
-        await logToApex(sessionId, rawText, 'รองรับเฉพาะ ABCU / DEFU เท่านั้น');
-        return res.sendStatus(200);
-      }
-
-      const template = JSON.parse(fs.readFileSync(path.join(__dirname, templateFile), "utf8"));
-      const finalFlex = injectData(template, mockData);
-      await replyFlex(event.replyToken, finalFlex);
-      await logToApex(sessionId, rawText, '[FLEX CARD: ' + containerNo + ']');
-      return res.sendStatus(200);
-    }
-
-    // --- Dialogflow Flex/Container ---
+    // --- Dialogflow Flex/Container Intent ---
     const cluResult = await detectIntent(
       "project-chatbot-oacy", authFlex,
       rawText, sessionId, "en"
     );
 
     log("CLU RESULT", {
-      intent: cluResult.intent?.displayName,
-      confidence: cluResult.intentDetectionConfidence,
+      intent:      cluResult.intent?.displayName,
+      confidence:  cluResult.intentDetectionConfidence,
       fulfillment: cluResult.fulfillmentText
     });
 
@@ -239,8 +144,8 @@ app.post('/webhook', async (req, res) => {
     );
 
     log("FAQ RESULT", {
-      intent: faqResult.intent?.displayName,
-      confidence: faqResult.intentDetectionConfidence,
+      intent:      faqResult.intent?.displayName,
+      confidence:  faqResult.intentDetectionConfidence,
       fulfillment: faqResult.fulfillmentText
     });
 
@@ -256,5 +161,5 @@ app.post('/webhook', async (req, res) => {
 });
 
 app.listen(process.env.PORT || 3000, () => {
-  console.log("🚀 Hybrid Bot (Flex + FAQ) running on port 3000");
+  console.log("🚀 Bot running on port 3000");
 });
