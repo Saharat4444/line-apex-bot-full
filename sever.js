@@ -6,6 +6,8 @@ const { GoogleAuth } = require('google-auth-library');
 const app = express();
 app.use(express.json());
 
+const APEX_FLEXCARD_URL = 'https://oracleapex.com/ords/line/linebot/flexcard';
+
 /* =====================================================
    LOGGER
 ===================================================== */
@@ -118,6 +120,26 @@ app.post('/webhook', async (req, res) => {
 
     const rawText = event.message.text.trim().toUpperCase();
     log("USER TEXT", rawText);
+
+    // --- Container → ส่งไป APEX จัดการแทน ---
+    const containerMatch = rawText.match(/[A-Z]{4}[0-9]{7}/);
+    if (containerMatch) {
+      const containerNo = containerMatch[0];
+      log("CONTAINER → APEX FLEXCARD", containerNo);
+
+      axios.post(APEX_FLEXCARD_URL, {
+        container_no: containerNo,
+        reply_token:  event.replyToken,
+        user_id:      sessionId
+      }, {
+        headers: { "Content-Type": "application/json" },
+        timeout: 10000
+      }).catch(err => {
+        console.error("APEX Flexcard Error:", err.message);
+      });
+
+      return res.sendStatus(200);
+    }
 
     // --- Dialogflow Flex/Container Intent ---
     const cluResult = await detectIntent(
