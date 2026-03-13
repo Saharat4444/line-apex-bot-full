@@ -1,8 +1,9 @@
 require('dotenv').config();
 const express = require('express');
 const axios = require('axios');
+const fs = require('fs');
+const path = require('path');
 const { GoogleAuth } = require('google-auth-library');
-const CONTAINER_DB = require('./containerDB');
 
 const app = express();
 app.use(express.json());
@@ -10,6 +11,7 @@ app.use(express.json());
 /* =====================================================
    LOGGER
 ===================================================== */
+
 function log(title, data = null) {
   console.log("\n===============================");
   console.log(`🔎 ${title}`);
@@ -25,7 +27,9 @@ function logError(error) {
 
 /* =====================================================
    DIALOGFLOW CONFIG
+   ✅ แก้จาก keyFile → credentials (env var)
 ===================================================== */
+
 const authFlex = new GoogleAuth({
   credentials: JSON.parse(process.env.GOOGLE_CREDENTIALS_FLEX),
   scopes: 'https://www.googleapis.com/auth/dialogflow'
@@ -39,16 +43,28 @@ const authFAQ = new GoogleAuth({
 /* =====================================================
    DETECT INTENT
 ===================================================== */
-async function detectIntent(projectId, authClient, text, sessionId, languageCode) {
-  try {
-    log("DIALOGFLOW REQUEST", { projectId, sessionId, languageCode, text });
 
-    const client      = await authClient.getClient();
+async function detectIntent(projectId, authClient, text, sessionId, languageCode) {
+
+  try {
+
+    log("DIALOGFLOW REQUEST", {
+      projectId,
+      sessionId,
+      languageCode,
+      text
+    });
+
+    const client = await authClient.getClient();
     const accessToken = await client.getAccessToken();
 
     const response = await axios.post(
       `https://dialogflow.googleapis.com/v2/projects/${projectId}/agent/sessions/${sessionId}:detectIntent`,
-      { queryInput: { text: { text, languageCode } } },
+      {
+        queryInput: {
+          text: { text, languageCode }
+        }
+      },
       {
         headers: {
           Authorization: `Bearer ${accessToken.token}`,
@@ -62,10 +78,10 @@ async function detectIntent(projectId, authClient, text, sessionId, languageCode
     const result = response.data.queryResult;
 
     log("DIALOGFLOW SUMMARY", {
-      intent:      result.intent?.displayName,
-      confidence:  result.intentDetectionConfidence,
+      intent: result.intent?.displayName,
+      confidence: result.intentDetectionConfidence,
       fulfillment: result.fulfillmentText,
-      parameters:  result.parameters
+      parameters: result.parameters
     });
 
     return result;
@@ -77,83 +93,69 @@ async function detectIntent(projectId, authClient, text, sessionId, languageCode
 }
 
 /* =====================================================
-   FLEX CARD BUILDER
+   HELPERS
 ===================================================== */
-function buildFlexCard(row) {
-  const isImport = row.trans_type === 'IMPORT';
-  const size     = [row.size_id, row.type_id, row.height_id].filter(Boolean).join('/') || '-';
 
-  const billLabel = isImport ? 'Bill of Lading :' : 'Booking :';
-  const billValue = isImport ? (row.bl_no || '-') : (row.book_no || '-');
+function isValidContainer(container) {
+  return /^[A-Z]{4}[0-9]{7}$/.test(container);
+}
 
-  const item = (label, value) => ({
-    type: "box", layout: "horizontal",
-    contents: [
-      { type: "text", text: label,       size: "sm", color: "#777777", flex: 3 },
-      { type: "text", text: value || '-', size: "sm", weight: "bold",  flex: 5, wrap: true }
-    ]
+function injectData(template, data) {
+  let jsonStr = JSON.stringify(template);
+  Object.keys(data).forEach(key => {
+    jsonStr = jsonStr.replace(new RegExp(`{{${key}}}`, "g"), data[key]);
   });
-
-  return {
-    type: "bubble", size: "mega",
-    body: {
-      type: "box", layout: "vertical", spacing: "md",
-      contents: [
-        { type: "text", text: "Container detail", weight: "bold", size: "md", color: "#333333" },
-        { type: "text", text: row.cntr_id, weight: "bold", size: "xxl", margin: "sm", wrap: true },
-        { type: "separator", margin: "md" },
-        {
-          type: "box", layout: "vertical", margin: "md", spacing: "sm",
-          contents: [
-            item("Sz/Ty/Ht :",      size),
-            item("Category :",      row.trans_type),
-            item("Status :",        row.status),
-            item("Location :",      row.loc),
-            item("Vessel :",        row.vessel),
-            item("Voyage :",        row.voyage),
-            item("Line :",          row.line_id),
-            item(billLabel,         billValue),
-            item("Home Berthing :", row.home_berth_tml),
-            item("Hold Status :",   row.account_status),
-            item("PVB :",           row.valid_before),
-          ]
-        }
-      ]
-    },
-    footer: {
-      type: "box", layout: "vertical",
-      contents: [{
-        type: "button", style: "secondary",
-        action: { type: "postback", label: "Check another container", data: "action=container" }
-      }]
-    }
-  };
+  return JSON.parse(jsonStr);
 }
 
 /* =====================================================
    LINE REPLY
 ===================================================== */
+
 async function replyText(replyToken, text) {
   await axios.post(
     "https://api.line.me/v2/bot/message/reply",
-    { replyToken, messages: [{ type: "text", text }] },
-    { headers: { Authorization: `Bearer ${process.env.LINE_CHANNEL_ACCESS_TOKEN}`, "Content-Type": "application/json" } }
+    {
+      replyToken,
+      messages: [{ type: "text", text }]
+    },
+    {
+      headers: {
+        Authorization: `Bearer ${process.env.LINE_CHANNEL_ACCESS_TOKEN}`,
+        "Content-Type": "application/json"
+      }
+    }
   );
 }
 
 async function replyFlex(replyToken, flexJson) {
   await axios.post(
     "https://api.line.me/v2/bot/message/reply",
-    { replyToken, messages: [{ type: "flex", altText: "Container Result", contents: flexJson }] },
-    { headers: { Authorization: `Bearer ${process.env.LINE_CHANNEL_ACCESS_TOKEN}`, "Content-Type": "application/json" } }
+    {
+      replyToken,
+      messages: [{
+        type: "flex",
+        altText: "Container Result",
+        contents: flexJson
+      }]
+    },
+    {
+      headers: {
+        Authorization: `Bearer ${process.env.LINE_CHANNEL_ACCESS_TOKEN}`,
+        "Content-Type": "application/json"
+      }
+    }
   );
 }
 
 /* =====================================================
    WEBHOOK
 ===================================================== */
+
 app.post('/webhook', async (req, res) => {
+
   try {
+
     const event = req.body.events?.[0];
     if (!event) return res.sendStatus(200);
 
@@ -161,68 +163,138 @@ app.post('/webhook', async (req, res) => {
 
     const sessionId = event.source.userId;
 
-    // Postback
     if (event.type === 'postback') {
-      const params = new URLSearchParams(event.postback?.data);
-      if (params.get('action') === 'container') {
-        await replyText(event.replyToken, 'กรุณาพิมพ์หมายเลขตู้ เช่น WHSU4035362');
+
+      const data = event.postback.data;
+      const params = new URLSearchParams(data);
+      const action = params.get("action");
+
+      console.log("POSTBACK ACTION:", action);
+
+      if (action === "container") {
+        await replyText(event.replyToken,
+          "กรุณาพิมพ์หมายเลขตู้ เช่น ABCU1234567"
+        );
       }
+
       return res.sendStatus(200);
     }
 
     if (event.type !== 'message' || event.message.type !== 'text')
       return res.sendStatus(200);
 
-    const rawText = event.message.text.trim();
+    const rawText = event.message.text.trim().toUpperCase();
     log("USER TEXT", rawText);
 
-    // --- Container → ดึงจาก containerDB.js ---
-    const containerMatch = rawText.toUpperCase().match(/[A-Z]{4}[0-9]{7}/);
+    const containerMatch = rawText.match(/[A-Z]{4}[0-9]{7}/);
+
     if (containerMatch) {
+
       const containerNo = containerMatch[0];
-      log("CONTAINER LOOKUP", containerNo);
 
-      const row = CONTAINER_DB[containerNo];
-
-      if (!row) {
-        await replyText(event.replyToken, `ไม่พบข้อมูลตู้ ${containerNo} ในระบบ`);
-      } else {
-        const flexJson = buildFlexCard(row);
-        await replyFlex(event.replyToken, flexJson);
+      if (!isValidContainer(containerNo)) {
+        await replyText(event.replyToken, "รูปแบบหมายเลขตู้ไม่ถูกต้อง");
+        return res.sendStatus(200);
       }
+
+      log("CONTAINER DETECTED", containerNo);
+
+      let templateFile;
+      let mockData;
+
+      if (containerNo.startsWith("ABCU")) {
+
+        templateFile = "flex_container_import.json";
+
+        mockData = {
+          container_no: containerNo,
+          category: "IMPORT",
+          size: "20/DR",
+          status: "Full",
+          location: "YARD",
+          vessel: "OOCL America OAE",
+          voyage: "190N",
+          line: "WHL",
+          bill: "IMP112233",
+          booking_no: "-",
+          home_berthing: "C1C2",
+          hold_status: "None",
+          pvb: "26-JAN-2026 23:59:59"
+        };
+
+      } else if (containerNo.startsWith("DEFU")) {
+
+        templateFile = "flex_container_export.json";
+
+        mockData = {
+          container_no: containerNo,
+          category: "EXPORT",
+          size: "40/HC",
+          status: "Loaded",
+          location: "PORT",
+          vessel: "OOCL Hong Kong",
+          voyage: "220E",
+          line: "WHL",
+          bill: "EXP998877",
+          booking_no: "BK-EXP-001",
+          home_berthing: "A3",
+          hold_status: "None",
+          pvb: "15-FEB-2026 18:00:00"
+        };
+
+      } else {
+        await replyText(event.replyToken, "รองรับเฉพาะ ABCU / DEFU เท่านั้น");
+        return res.sendStatus(200);
+      }
+
+      const templatePath = path.join(__dirname, templateFile);
+      const template = JSON.parse(fs.readFileSync(templatePath, "utf8"));
+      const finalFlex = injectData(template, mockData);
+
+      await replyFlex(event.replyToken, finalFlex);
       return res.sendStatus(200);
     }
 
-    // --- Dialogflow Flex/Container Intent ---
     const cluResult = await detectIntent(
-      "project-chatbot-oacy", authFlex,
-      rawText.toUpperCase(), sessionId, "en"
+      "project-chatbot-oacy",
+      authFlex,
+      rawText,
+      sessionId,
+      "en"
     );
 
     log("CLU RESULT", {
-      intent:      cluResult.intent?.displayName,
-      confidence:  cluResult.intentDetectionConfidence,
+      intent: cluResult.intent?.displayName,
+      confidence: cluResult.intentDetectionConfidence,
       fulfillment: cluResult.fulfillmentText
     });
 
-    if (cluResult.intentDetectionConfidence >= 0.6 && cluResult.fulfillmentText) {
+    if (
+      cluResult.intentDetectionConfidence >= 0.6 &&
+      cluResult.fulfillmentText
+    ) {
       await replyText(event.replyToken, cluResult.fulfillmentText);
       return res.sendStatus(200);
     }
 
-    // --- Dialogflow FAQ ---
     const faqResult = await detectIntent(
-      "project-chatbot-faqs-hpqt", authFAQ,
-      rawText.toUpperCase(), sessionId, "th"
+      "project-chatbot-faqs-hpqt",
+      authFAQ,
+      rawText,
+      sessionId,
+      "th"
     );
 
     log("FAQ RESULT", {
-      intent:      faqResult.intent?.displayName,
-      confidence:  faqResult.intentDetectionConfidence,
+      intent: faqResult.intent?.displayName,
+      confidence: faqResult.intentDetectionConfidence,
       fulfillment: faqResult.fulfillmentText
     });
 
-    const faqAnswer = faqResult.fulfillmentText || "ไม่พบข้อมูลที่เกี่ยวข้อง";
+    const faqAnswer =
+      faqResult.fulfillmentText ||
+      "ไม่พบข้อมูลที่เกี่ยวข้อง";
+
     await replyText(event.replyToken, faqAnswer);
     return res.sendStatus(200);
 
@@ -232,6 +304,9 @@ app.post('/webhook', async (req, res) => {
   }
 });
 
+/* =====================================================
+   ✅ แก้จาก listen(3000) → listen(PORT || 3000)
+===================================================== */
 app.listen(process.env.PORT || 3000, () => {
-  console.log("🚀 Bot running on port 3000");
+  console.log("🚀 Hybrid Bot (Flex + FAQ) running on port 3000");
 });
