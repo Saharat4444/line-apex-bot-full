@@ -2,11 +2,10 @@ require('dotenv').config();
 const express = require('express');
 const axios = require('axios');
 const { GoogleAuth } = require('google-auth-library');
+const CONTAINER_DB = require('./containerDB');
 
 const app = express();
 app.use(express.json());
-
-const APEX_FLEXCARD_URL = 'https://oracleapex.com/ords/line/linebot/flexcard';
 
 /* =====================================================
    LOGGER
@@ -22,13 +21,6 @@ function logError(error) {
   console.log("\n❌ ERROR ======================");
   console.log(error.response?.data || error.message);
   console.log("===============================\n");
-}
-
-/* =====================================================
-   APEX LOGGING (ปิดไว้ — Cloudflare จัดการแทน)
-===================================================== */
-async function logToApex(userId, message, reply) {
-  return;
 }
 
 /* =====================================================
@@ -85,18 +77,75 @@ async function detectIntent(projectId, authClient, text, sessionId, languageCode
 }
 
 /* =====================================================
+   FLEX CARD BUILDER
+===================================================== */
+function buildFlexCard(row) {
+  const isImport = row.trans_type === 'IMPORT';
+  const size     = [row.size_id, row.type_id, row.height_id].filter(Boolean).join('/') || '-';
+
+  const billLabel = isImport ? 'Bill of Lading :' : 'Booking :';
+  const billValue = isImport ? (row.bl_no || '-') : (row.book_no || '-');
+
+  const item = (label, value) => ({
+    type: "box", layout: "horizontal",
+    contents: [
+      { type: "text", text: label,       size: "sm", color: "#777777", flex: 3 },
+      { type: "text", text: value || '-', size: "sm", weight: "bold",  flex: 5, wrap: true }
+    ]
+  });
+
+  return {
+    type: "bubble", size: "mega",
+    body: {
+      type: "box", layout: "vertical", spacing: "md",
+      contents: [
+        { type: "text", text: "Container detail", weight: "bold", size: "md", color: "#333333" },
+        { type: "text", text: row.cntr_id, weight: "bold", size: "xxl", margin: "sm", wrap: true },
+        { type: "separator", margin: "md" },
+        {
+          type: "box", layout: "vertical", margin: "md", spacing: "sm",
+          contents: [
+            item("Sz/Ty/Ht :",      size),
+            item("Category :",      row.trans_type),
+            item("Status :",        row.status),
+            item("Location :",      row.loc),
+            item("Vessel :",        row.vessel),
+            item("Voyage :",        row.voyage),
+            item("Line :",          row.line_id),
+            item(billLabel,         billValue),
+            item("Home Berthing :", row.home_berth_tml),
+            item("Hold Status :",   row.account_status),
+            item("PVB :",           row.valid_before),
+          ]
+        }
+      ]
+    },
+    footer: {
+      type: "box", layout: "vertical",
+      contents: [{
+        type: "button", style: "secondary",
+        action: { type: "postback", label: "Check another container", data: "action=container" }
+      }]
+    }
+  };
+}
+
+/* =====================================================
    LINE REPLY
 ===================================================== */
 async function replyText(replyToken, text) {
   await axios.post(
     "https://api.line.me/v2/bot/message/reply",
     { replyToken, messages: [{ type: "text", text }] },
-    {
-      headers: {
-        Authorization: `Bearer ${process.env.LINE_CHANNEL_ACCESS_TOKEN}`,
-        "Content-Type": "application/json"
-      }
-    }
+    { headers: { Authorization: `Bearer ${process.env.LINE_CHANNEL_ACCESS_TOKEN}`, "Content-Type": "application/json" } }
+  );
+}
+
+async function replyFlex(replyToken, flexJson) {
+  await axios.post(
+    "https://api.line.me/v2/bot/message/reply",
+    { replyToken, messages: [{ type: "flex", altText: "Container Result", contents: flexJson }] },
+    { headers: { Authorization: `Bearer ${process.env.LINE_CHANNEL_ACCESS_TOKEN}`, "Content-Type": "application/json" } }
   );
 }
 
@@ -112,39 +161,42 @@ app.post('/webhook', async (req, res) => {
 
     const sessionId = event.source.userId;
 
-    // Postback — Cloudflare จัดการแทนแล้ว
-    if (event.type === 'postback') return res.sendStatus(200);
+    // Postback
+    if (event.type === 'postback') {
+      const params = new URLSearchParams(event.postback?.data);
+      if (params.get('action') === 'container') {
+        await replyText(event.replyToken, 'กรุณาพิมพ์หมายเลขตู้ เช่น WHSU4035362');
+      }
+      return res.sendStatus(200);
+    }
 
     if (event.type !== 'message' || event.message.type !== 'text')
       return res.sendStatus(200);
 
-    const rawText = event.message.text.trim().toUpperCase();
+    const rawText = event.message.text.trim();
     log("USER TEXT", rawText);
 
-    // --- Container → ส่งไป APEX จัดการแทน ---
-    const containerMatch = rawText.match(/[A-Z]{4}[0-9]{7}/);
+    // --- Container → ดึงจาก containerDB.js ---
+    const containerMatch = rawText.toUpperCase().match(/[A-Z]{4}[0-9]{7}/);
     if (containerMatch) {
       const containerNo = containerMatch[0];
-      log("CONTAINER → APEX FLEXCARD", containerNo);
+      log("CONTAINER LOOKUP", containerNo);
 
-      axios.post(APEX_FLEXCARD_URL, {
-        container_no: containerNo,
-        reply_token:  event.replyToken,
-        user_id:      sessionId
-      }, {
-        headers: { "Content-Type": "application/json" },
-        timeout: 10000
-      }).catch(err => {
-        console.error("APEX Flexcard Error:", err.message);
-      });
+      const row = CONTAINER_DB[containerNo];
 
+      if (!row) {
+        await replyText(event.replyToken, `ไม่พบข้อมูลตู้ ${containerNo} ในระบบ`);
+      } else {
+        const flexJson = buildFlexCard(row);
+        await replyFlex(event.replyToken, flexJson);
+      }
       return res.sendStatus(200);
     }
 
     // --- Dialogflow Flex/Container Intent ---
     const cluResult = await detectIntent(
       "project-chatbot-oacy", authFlex,
-      rawText, sessionId, "en"
+      rawText.toUpperCase(), sessionId, "en"
     );
 
     log("CLU RESULT", {
@@ -155,14 +207,13 @@ app.post('/webhook', async (req, res) => {
 
     if (cluResult.intentDetectionConfidence >= 0.6 && cluResult.fulfillmentText) {
       await replyText(event.replyToken, cluResult.fulfillmentText);
-      await logToApex(sessionId, rawText, cluResult.fulfillmentText);
       return res.sendStatus(200);
     }
 
     // --- Dialogflow FAQ ---
     const faqResult = await detectIntent(
       "project-chatbot-faqs-hpqt", authFAQ,
-      rawText, sessionId, "th"
+      rawText.toUpperCase(), sessionId, "th"
     );
 
     log("FAQ RESULT", {
@@ -173,7 +224,6 @@ app.post('/webhook', async (req, res) => {
 
     const faqAnswer = faqResult.fulfillmentText || "ไม่พบข้อมูลที่เกี่ยวข้อง";
     await replyText(event.replyToken, faqAnswer);
-    await logToApex(sessionId, rawText, faqAnswer);
     return res.sendStatus(200);
 
   } catch (err) {
