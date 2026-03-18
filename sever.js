@@ -11,7 +11,6 @@ app.use(express.json());
 /* =====================================================
    LOGGER
 ===================================================== */
-
 function log(title, data = null) {
   console.log("\n===============================");
   console.log(`🔎 ${title}`);
@@ -27,9 +26,7 @@ function logError(error) {
 
 /* =====================================================
    DIALOGFLOW CONFIG
-   ✅ แก้จาก keyFile → credentials (env var)
 ===================================================== */
-
 const authFlex = new GoogleAuth({
   credentials: JSON.parse(process.env.GOOGLE_CREDENTIALS_FLEX),
   scopes: 'https://www.googleapis.com/auth/dialogflow'
@@ -43,28 +40,16 @@ const authFAQ = new GoogleAuth({
 /* =====================================================
    DETECT INTENT
 ===================================================== */
-
 async function detectIntent(projectId, authClient, text, sessionId, languageCode) {
-
   try {
-
-    log("DIALOGFLOW REQUEST", {
-      projectId,
-      sessionId,
-      languageCode,
-      text
-    });
+    log("DIALOGFLOW REQUEST", { projectId, sessionId, languageCode, text });
 
     const client = await authClient.getClient();
     const accessToken = await client.getAccessToken();
 
     const response = await axios.post(
       `https://dialogflow.googleapis.com/v2/projects/${projectId}/agent/sessions/${sessionId}:detectIntent`,
-      {
-        queryInput: {
-          text: { text, languageCode }
-        }
-      },
+      { queryInput: { text: { text, languageCode } } },
       {
         headers: {
           Authorization: `Bearer ${accessToken.token}`,
@@ -78,10 +63,9 @@ async function detectIntent(projectId, authClient, text, sessionId, languageCode
     const result = response.data.queryResult;
 
     log("DIALOGFLOW SUMMARY", {
-      intent: result.intent?.displayName,
-      confidence: result.intentDetectionConfidence,
-      fulfillment: result.fulfillmentText,
-      parameters: result.parameters
+      intent:      result.intent?.displayName,
+      confidence:  result.intentDetectionConfidence,
+      fulfillment: result.fulfillmentText
     });
 
     return result;
@@ -95,7 +79,6 @@ async function detectIntent(projectId, authClient, text, sessionId, languageCode
 /* =====================================================
    HELPERS
 ===================================================== */
-
 function isValidContainer(container) {
   return /^[A-Z]{4}[0-9]{7}$/.test(container);
 }
@@ -108,17 +91,20 @@ function injectData(template, data) {
   return JSON.parse(jsonStr);
 }
 
+// ✅ ตรวจว่าเป็น Default Fallback Intent หรือเปล่า
+function isFallback(result) {
+  const intentName = result.intent?.displayName || '';
+  return intentName.toLowerCase().includes('default fallback') ||
+         intentName.toLowerCase().includes('fallback');
+}
+
 /* =====================================================
    LINE REPLY
 ===================================================== */
-
 async function replyText(replyToken, text) {
   await axios.post(
     "https://api.line.me/v2/bot/message/reply",
-    {
-      replyToken,
-      messages: [{ type: "text", text }]
-    },
+    { replyToken, messages: [{ type: "text", text }] },
     {
       headers: {
         Authorization: `Bearer ${process.env.LINE_CHANNEL_ACCESS_TOKEN}`,
@@ -133,11 +119,7 @@ async function replyFlex(replyToken, flexJson) {
     "https://api.line.me/v2/bot/message/reply",
     {
       replyToken,
-      messages: [{
-        type: "flex",
-        altText: "Container Result",
-        contents: flexJson
-      }]
+      messages: [{ type: "flex", altText: "Container Result", contents: flexJson }]
     },
     {
       headers: {
@@ -151,11 +133,8 @@ async function replyFlex(replyToken, flexJson) {
 /* =====================================================
    WEBHOOK
 ===================================================== */
-
 app.post('/webhook', async (req, res) => {
-
   try {
-
     const event = req.body.events?.[0];
     if (!event) return res.sendStatus(200);
 
@@ -163,33 +142,30 @@ app.post('/webhook', async (req, res) => {
 
     const sessionId = event.source.userId;
 
+    // --- Postback ---
     if (event.type === 'postback') {
-
-      const data = event.postback.data;
-      const params = new URLSearchParams(data);
+      const params = new URLSearchParams(event.postback.data);
       const action = params.get("action");
-
       console.log("POSTBACK ACTION:", action);
 
       if (action === "container") {
-        await replyText(event.replyToken,
-          "กรุณาพิมพ์หมายเลขตู้ เช่น ABCU1234567"
-        );
+        await replyText(event.replyToken, "กรุณาพิมพ์หมายเลขตู้ เช่น ABCU1234567");
       }
-
       return res.sendStatus(200);
     }
 
     if (event.type !== 'message' || event.message.type !== 'text')
       return res.sendStatus(200);
 
-    const rawText = event.message.text.trim().toUpperCase();
-    log("USER TEXT", rawText);
+    const originalText = event.message.text.trim();       // ใช้กับ Dialogflow
+    const upperText    = originalText.toUpperCase();      // ใช้ตรวจ Container เท่านั้น
 
-    const containerMatch = rawText.match(/[A-Z]{4}[0-9]{7}/);
+    log("USER TEXT", originalText);
+
+    // --- Container ---
+    const containerMatch = upperText.match(/[A-Z]{4}[0-9]{7}/);
 
     if (containerMatch) {
-
       const containerNo = containerMatch[0];
 
       if (!isValidContainer(containerNo)) {
@@ -199,102 +175,74 @@ app.post('/webhook', async (req, res) => {
 
       log("CONTAINER DETECTED", containerNo);
 
-      let templateFile;
-      let mockData;
+      let templateFile, mockData;
 
       if (containerNo.startsWith("ABCU")) {
-
         templateFile = "flex_container_import.json";
-
         mockData = {
           container_no: containerNo,
-          category: "IMPORT",
-          size: "20/DR",
-          status: "Full",
-          location: "YARD",
-          vessel: "OOCL America OAE",
-          voyage: "190N",
-          line: "WHL",
-          bill: "IMP112233",
-          booking_no: "-",
-          home_berthing: "C1C2",
-          hold_status: "None",
+          category: "IMPORT", size: "20/DR", status: "Full",
+          location: "YARD", vessel: "OOCL America OAE", voyage: "190N",
+          line: "WHL", bill: "IMP112233", booking_no: "-",
+          home_berthing: "C1C2", hold_status: "None",
           pvb: "26-JAN-2026 23:59:59"
         };
-
       } else if (containerNo.startsWith("DEFU")) {
-
         templateFile = "flex_container_export.json";
-
         mockData = {
           container_no: containerNo,
-          category: "EXPORT",
-          size: "40/HC",
-          status: "Loaded",
-          location: "PORT",
-          vessel: "OOCL Hong Kong",
-          voyage: "220E",
-          line: "WHL",
-          bill: "EXP998877",
-          booking_no: "BK-EXP-001",
-          home_berthing: "A3",
-          hold_status: "None",
+          category: "EXPORT", size: "40/HC", status: "Loaded",
+          location: "PORT", vessel: "OOCL Hong Kong", voyage: "220E",
+          line: "WHL", bill: "EXP998877", booking_no: "BK-EXP-001",
+          home_berthing: "A3", hold_status: "None",
           pvb: "15-FEB-2026 18:00:00"
         };
-
       } else {
         await replyText(event.replyToken, "รองรับเฉพาะ ABCU / DEFU เท่านั้น");
         return res.sendStatus(200);
       }
 
-      const templatePath = path.join(__dirname, templateFile);
-      const template = JSON.parse(fs.readFileSync(templatePath, "utf8"));
+      const template = JSON.parse(fs.readFileSync(path.join(__dirname, templateFile), "utf8"));
       const finalFlex = injectData(template, mockData);
-
       await replyFlex(event.replyToken, finalFlex);
       return res.sendStatus(200);
     }
 
+    // --- Dialogflow EN (สำหรับ Container Intent) ---
     const cluResult = await detectIntent(
-      "project-chatbot-oacy",
-      authFlex,
-      rawText,
-      sessionId,
-      "en"
+      "project-chatbot-oacy", authFlex,
+      originalText, sessionId, "en"
     );
 
     log("CLU RESULT", {
-      intent: cluResult.intent?.displayName,
-      confidence: cluResult.intentDetectionConfidence,
+      intent:      cluResult.intent?.displayName,
+      confidence:  cluResult.intentDetectionConfidence,
       fulfillment: cluResult.fulfillmentText
     });
 
+    // ✅ ข้ามถ้าเป็น Fallback Intent — ไม่ตอบ "I didn't get that"
     if (
       cluResult.intentDetectionConfidence >= 0.6 &&
-      cluResult.fulfillmentText
+      cluResult.fulfillmentText &&
+      !isFallback(cluResult)                          // ← เพิ่มตรงนี้
     ) {
       await replyText(event.replyToken, cluResult.fulfillmentText);
       return res.sendStatus(200);
     }
 
+    // --- Dialogflow FAQ Thai ---
     const faqResult = await detectIntent(
-      "project-chatbot-faqs-hpqt",
-      authFAQ,
-      rawText,
-      sessionId,
-      "th"
+      "project-chatbot-faqs-hpqt", authFAQ,
+      originalText, sessionId, "th"
     );
 
     log("FAQ RESULT", {
-      intent: faqResult.intent?.displayName,
-      confidence: faqResult.intentDetectionConfidence,
+      intent:      faqResult.intent?.displayName,
+      confidence:  faqResult.intentDetectionConfidence,
       fulfillment: faqResult.fulfillmentText
     });
 
-    const faqAnswer =
-      faqResult.fulfillmentText ||
-      "ไม่พบข้อมูลที่เกี่ยวข้อง";
-
+    const faqAnswer = faqResult.fulfillmentText || "ไม่พบข้อมูลที่เกี่ยวข้อง";
     await replyText(event.replyToken, faqAnswer);
     return res.sendStatus(200);
 
@@ -304,9 +252,6 @@ app.post('/webhook', async (req, res) => {
   }
 });
 
-/* =====================================================
-   ✅ แก้จาก listen(3000) → listen(PORT || 3000)
-===================================================== */
 app.listen(process.env.PORT || 3000, () => {
   console.log("🚀 Hybrid Bot (Flex + FAQ) running on port 3000");
 });
