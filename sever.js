@@ -148,8 +148,8 @@ function buildContainerFlex(d) {
             row("Voyage :",        d.voyage),                         // CASE IN/OUT_SHIP_VOY
             row("Line :",          d.line_id),
             isImport
-              ? row("Bill of Lading :", d.bl_no)                     // BL_NO (IMPORT)
-              : row("Booking :",        d.book_no),                   // BOOK_NO (EXPORT)
+              ? row("Booking :",        d.book_no)                    // BOOK_NO (IMPORT)
+              : row("Bill of Lading :", d.bl_no),                     // BL_NO (EXPORT)
             row("Home Berthing :", d.home_berth_tml),                 // HOME_BERTH_TML
             row("Hold Status :",   d.account_status),                 // ACCOUNT_STATUS
             row("PVB :",           d.valid_before),                   // VALID_BEFORE
