@@ -147,6 +147,15 @@ function buildBookingFlex(d) {
         {
           type: "button", style: "secondary", color: "#eeeeee",
           action: { type: "postback", label: "Check Another Booking", data: "action=booking" }
+        },
+        // ✅ ปุ่มประเมินความพอใจ — ส่ง booking_bl เป็น refId
+        {
+          type: "button", style: "secondary", color: "#eeeeee",
+          action: {
+            type: "postback",
+            label: "⭐ ประเมินความพอใจ",
+            data: `action=survey&ref=${encodeURIComponent(d.booking_bl || '')}`
+          }
         }
       ]
     }
@@ -227,8 +236,16 @@ function buildSurveyFlex(refId = '') {
       contents: [
         { type: "text", text: "ประเมินความพอใจ", weight: "bold", size: "lg",
           color: "#333333", align: "center" },
-        { type: "text", text: "กรุณาให้คะแนนการบริการ" + refLabel,
+        { type: "text", text: "กรุณาให้คะแนนการบริการ",
           size: "sm", color: "#aaaaaa", align: "center", wrap: true, margin: "sm" },
+        // แสดง refId เฉพาะเมื่อมีค่า
+        ...(refId ? [{
+          type: "box", layout: "horizontal", margin: "sm",
+          contents: [
+            { type: "text", text: "อ้างอิง:", size: "xs", color: "#aaaaaa", flex: 3 },
+            { type: "text", text: refId, size: "xs", weight: "bold", color: "#333333", flex: 7, wrap: true }
+          ]
+        }] : []),
         { type: "separator", margin: "lg" },
         { type: "text", text: "1 = น้อยที่สุด   5 = มากที่สุด",
           size: "xs", color: "#aaaaaa", align: "center", margin: "md" },
