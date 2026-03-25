@@ -170,11 +170,11 @@ function buildSurveyFlex(refId = '') {
       style: "primary",
       height: "sm",
       flex: 1, // ✅ ทำให้ปุ่มเท่ากัน
-      color: score === 5 ? "#37474F"
-           : score === 4 ? "#546E7A"
-           : score === 3 ? "#78909C"
-           : score === 2 ? "#B0BEC5"
-           :               "#CFD8DC",
+      color: score === 5 ? "#2C5F8A"
+           : score === 4 ? "#6FA3C7"
+           : score === 3 ? "#9FC0DC"
+           : score === 2 ? "#C7D9EA"
+           :               "#E6EEF5",
       action: {
         type: "postback",
         label: String(score), // ✅ เหลือแค่ตัวเลข
