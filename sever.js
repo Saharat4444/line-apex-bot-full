@@ -207,8 +207,8 @@ app.post('/webhook', async (req, res) => {
 
       // ปุ่ม "Check another xxx" → แนะนำให้พิมพ์ใหม่
       const hints = {
-        container: "กรุณาพิมพ์หมายเลขตู้ เช่น TCLU8304461",
-        booking:   "กรุณาพิมพ์ booking แล้วตามด้วยเลข\nเช่น booking BKK07102025",
+        container: "กรุณาพิมพ์หมายเลขตู้ เช่น ABCU1234567",
+        booking:   "กรุณาพิมพ์ booking แล้วตามด้วยเลข\nเช่น booking BKK12345678",
         vessel:    "กรุณาพิมพ์ เรือ แล้วตามด้วยชื่อเรือ\nเช่น เรือ Nanhirun"
       };
       await replyText(event.replyToken, hints[action] || "กรุณาพิมพ์ข้อความ");
