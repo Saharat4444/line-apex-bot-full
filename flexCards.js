@@ -164,7 +164,7 @@ function buildVesselFlex(d) {
 /* ================= SURVEY ================= */
 function buildSurveyFlex(refId = '') {
 
-  function starBtn(score, label) {
+  function starBtn(score) {
     return {
       type: "button",
       style: "primary",
@@ -177,7 +177,7 @@ function buildSurveyFlex(refId = '') {
            :               "#CFD8DC",
       action: {
         type: "postback",
-        label: String(score),
+        label: String(score), // ✅ เหลือแค่ตัวเลข
         data: `action=rate&score=${score}&ref=${encodeURIComponent(refId)}`
       }
     };
@@ -199,7 +199,7 @@ function buildSurveyFlex(refId = '') {
     },
     footer: {
       type: "box",
-      layout: "horizontal",
+      layout: "horizontal", // ✅ แถวเดียว
       spacing: "sm",
       paddingAll: "10px",
       contents: [
@@ -208,8 +208,6 @@ function buildSurveyFlex(refId = '') {
         starBtn(3),
         starBtn(4),
         starBtn(5)
-         ]
-        }
       ]
     }
   };
