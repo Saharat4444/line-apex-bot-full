@@ -173,7 +173,14 @@ app.post('/webhook', async (req, res) => {
         return res.sendStatus(200);
       }
 
-      // กดปุ่ม "ประเมินความพอใจ" → แสดง Survey card ให้กดดาว
+      // กดปุ่ม "Cost Estimate" จาก Rich Menu → เปลี่ยนเป็นแสดง Survey
+      // action=cost มาจาก Rich Menu เดิม ไม่มี refId
+      if (action === 'cost') {
+        await replyFlex(event.replyToken, 'ประเมินความพอใจ', buildSurveyFlex(''));
+        return res.sendStatus(200);
+      }
+
+      // กดปุ่ม "ประเมินความพอใจ" จาก Card → มี refId (หมายเลขตู้ / booking)
       if (action === 'survey') {
         const refId = params.get("ref") || '';
         await replyFlex(event.replyToken, 'ประเมินความพอใจ', buildSurveyFlex(refId));
