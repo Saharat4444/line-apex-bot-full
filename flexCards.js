@@ -33,7 +33,7 @@ function buildContainerFlex(d) {
       type: "button", style: "primary", color: "#2C5F8A",
       action: {
         type: "postback",
-        label: "Check Booking",
+        label: "ตรวจสอบการจอง",
         data: `action=lookup_booking&value=${String(bookingRef).trim()}`
       }
     });
@@ -109,11 +109,11 @@ function buildBookingFlex(d) {
       contents: [
         {
           type: "button", style: "primary", color: "#2C5F8A",
-          action: { type: "uri", label: "More Details", uri: "https://uatonline.hutchisonports.co.th" }
+          action: { type: "uri", label: "ดูรายละเอียดเพิ่มเติม", uri: "https://uatonline.hutchisonports.co.th" }
         },
         {
           type: "button", style: "secondary", color: "#E3E8ED",
-          action: { type: "postback", label: "Check Another Booking", data: "action=booking" }
+          action: { type: "postback", label: "ตรวจสอบการจองอื่น", data: "action=booking" }
         },
         {
           type: "button", style: "secondary", color: "#E3E8ED",
@@ -156,7 +156,7 @@ function buildVesselFlex(d) {
       contents: [
         {
           type: "button", style: "secondary", color: "#E3E8ED",
-          action: { type: "postback", label: "Check another vessel", data: "action=vessel" }
+          action: { type: "postback", label: "ตรวจสอบเรือลำอื่น", data: "action=vessel" }
         },
         {
           type: "button", style: "secondary", color: "#E3E8ED",
