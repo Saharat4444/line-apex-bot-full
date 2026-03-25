@@ -3,6 +3,15 @@ const express = require('express');
 const axios = require('axios');
 const { GoogleAuth } = require('google-auth-library');
 
+// ดึง Flex Card ทั้งหมดจาก flexCards.js
+// ถ้าอยากเพิ่มการ์ดใหม่ → ไปแก้ที่ flexCards.js
+const {
+  buildContainerFlex,
+  buildBookingFlex,
+  buildVesselFlex,
+  buildSurveyFlex
+} = require('./flexCards');
+
 const app = express();
 app.use(express.json());
 
@@ -64,7 +73,7 @@ function isFallback(result) {
 function detectSearchType(text) {
   const upper = text.toUpperCase().trim();
 
-  // Container: 4 ตัวอักษร + 7 ตัวเลข (รวม 11 ตัว)
+  // Container: 4 ตัวอักษร + 7 ตัวเลข
   const containerMatch = upper.match(/\b([A-Z]{4}[0-9]{7})\b/);
   if (containerMatch) return { type: 'container', value: containerMatch[1] };
 
@@ -105,168 +114,6 @@ function getFirstItem(apexData) {
 }
 
 /* =====================================================
-   FLEX CARD HELPERS
-===================================================== */
-function row(label, value) {
-  return {
-    type: "box", layout: "horizontal",
-    contents: [
-      { type: "text", text: label,        size: "sm", color: "#aaaaaa", flex: 4 },
-      { type: "text", text: value || "-", size: "sm", weight: "bold", color: "#333333", flex: 6, wrap: true }
-    ]
-  };
-}
-
-/* =====================================================
-   CARD 1 & 2 — Container detail
-   ใช้ column จาก NEDR_CNTR_DETAIL_TRUCK_SN:
-     CNTR_ID, TRANS_TYPE, SIZE_ID, TYPE_ID, HEIGHT_ID,
-     STATUS, LOC, VESSEL, VOYAGE (computed),
-     LINE_ID, BL_NO, BOOK_NO,
-     HOME_BERTH_TML, ACCOUNT_STATUS, VALID_BEFORE
-===================================================== */
-function buildContainerFlex(d) {
-  const isImport = (d.trans_type || '').toUpperCase() === 'IMPORT';
-  const size     = [d.size_id, d.type_id, d.height_id].filter(Boolean).join('/') || '-';
-
-  return {
-    type: "bubble", size: "mega",
-    body: {
-      type: "box", layout: "vertical", spacing: "md", paddingAll: "20px",
-      contents: [
-        { type: "text", text: "Container detail", weight: "bold", size: "sm", color: "#333333" },
-        { type: "text", text: d.cntr_id || "-", weight: "bold", size: "xxl", wrap: true },
-        { type: "separator", margin: "md" },
-        {
-          type: "box", layout: "vertical", margin: "md", spacing: "sm",
-          contents: [
-            row("Sz/Ty/Ht :",      size),
-            row("Category :",      d.trans_type),
-            row("Status :",        d.status),
-            row("Location :",      d.loc),
-            row("Vessel :",        d.vessel),
-            row("Voyage :",        d.voyage),                         // CASE IN/OUT_SHIP_VOY
-            row("Line :",          d.line_id),
-            isImport
-              ? row("Booking :",        d.book_no)                    // BOOK_NO (IMPORT)
-              : row("Bill of Lading :", d.bl_no),                     // BL_NO (EXPORT)
-            row("Home Berthing :", d.home_berth_tml),                 // HOME_BERTH_TML
-            row("Hold Status :",   d.account_status),                 // ACCOUNT_STATUS
-            row("PVB :",           d.valid_before),                   // VALID_BEFORE
-          ]
-        },
-        { type: "text", text: "PVB : Payment Valid Before", size: "xs", color: "#aaaaaa", margin: "md" }
-      ]
-    },
-    footer: {
-      type: "box", layout: "vertical", paddingAll: "10px",
-      contents: [{
-        type: "button", style: "secondary", color: "#eeeeee",
-        action: { type: "postback", label: "Check another container", data: "action=container" }
-      }]
-    }
-  };
-}
-
-/* =====================================================
-   CARD 3 — Vessel Schedule
-   ใช้ column จาก NEDR_VESSEL_SCHEDULE_SN:
-     SHIP_NAME, IN_VOY_NBR→VOYAGE_CODE,
-     BILLING_TERMINAL→TERMINAL,
-     ETA, DEP→ETD,
-     CARGO_CUTOFF→CLOSING_TIME,
-     ARR_STATUS→CURRENTLY_IN_PORT,
-     BERTH
-   ** ไม่มี SHIPPING_AGENT ในตาราง → ซ่อน field นี้ **
-===================================================== */
-function buildVesselFlex(d) {
-  return {
-    type: "bubble", size: "mega",
-    body: {
-      type: "box", layout: "vertical", spacing: "md", paddingAll: "20px",
-      contents: [
-        { type: "text", text: "Vessel Schedule", weight: "bold", size: "sm", color: "#333333" },
-        { type: "text", text: d.ship_name || "-", weight: "bold", size: "xxl", wrap: true },
-        { type: "separator", margin: "md" },
-        {
-          type: "box", layout: "vertical", margin: "md", spacing: "sm",
-          contents: [
-            row("Voyage Code :",         d.voyage_code),              // IN_VOY_NBR
-            row("Arrives in Terminal :", d.terminal),                 // BILLING_TERMINAL
-            row("Estimated Arrival :",   d.eta),                      // ETA
-            row("Estimated Departure :", d.dep),                      // DEP
-            row("Closing :",             d.closing_time),             // CARGO_CUTOFF
-            row("Currently in Port :",   d.currently_in_port),        // ARR_STATUS
-            row("Berth :",               d.berth),                    // BERTH
-          ]
-        }
-      ]
-    },
-    footer: {
-      type: "box", layout: "vertical", paddingAll: "10px",
-      contents: [{
-        type: "button", style: "secondary", color: "#eeeeee",
-        action: { type: "postback", label: "Check another vessel", data: "action=vessel" }
-      }]
-    }
-  };
-}
-
-/* =====================================================
-   CARD 5 — Booking
-   ใช้ column จาก NEDR_BOOK_BL_VW_SN (GROUP BY):
-     BOOK_NO_QUERY, BL_NO_QUERY, CATEGORY,
-     IN_SHIP_NAME / OUT_SHIP_NAME → vessel
-     IN_SHIP_VOY  / OUT_SHIP_VOY  → voyage
-     CUSTOMER → ชื่อลูกค้า
-     COUNT(CNTR_NBR) → CONTAINER_COUNT
-   ** ไม่มี BOOKING_CREATED → ซ่อน field นี้ **
-===================================================== */
-function buildBookingFlex(d) {
-  const isImport = (d.category || '').toUpperCase() === 'IMPORT';
-  const vessel   = isImport ? d.in_ship_name  : d.out_ship_name;
-  const voyage   = isImport ? d.in_ship_voy   : d.out_ship_voy;
-
-  return {
-    type: "bubble", size: "mega",
-    body: {
-      type: "box", layout: "vertical", spacing: "md", paddingAll: "20px",
-      contents: [
-        { type: "text", text: "Booking", weight: "bold", size: "sm", color: "#333333" },
-        { type: "text", text: d.book_no_query || "-", weight: "bold", size: "xxl", wrap: true },
-        { type: "separator", margin: "md" },
-        {
-          type: "box", layout: "vertical", margin: "md", spacing: "sm",
-          contents: [
-            row("B/L No :",           d.bl_no_query),                 // BL_NO_QUERY
-            row("Category :",         d.category),                    // CATEGORY
-            row("Vessel :",           vessel),                        // IN/OUT_SHIP_NAME
-            row("Voyage :",           voyage),                        // IN/OUT_SHIP_VOY
-            row("Customer :",         d.customer),                    // CUSTOMER
-            row("Total Containers :", String(d.container_count)),     // COUNT(CNTR_NBR)
-          ]
-        },
-        { type: "separator", margin: "md" },
-        { type: "text", text: "Note: For more details, visit HPT DIGITAL PLATFORM.", size: "xs", color: "#aaaaaa", wrap: true, margin: "md" }
-      ]
-    },
-    footer: {
-      type: "box", layout: "vertical", spacing: "sm", paddingAll: "10px",
-      contents: [
-        {
-          type: "button", style: "primary", color: "#00B900",
-          action: { type: "uri", label: "More Details", uri: "https://uatonline.hutchisonports.co.th" }
-        },
-        {
-          type: "button", style: "secondary", color: "#eeeeee",
-          action: { type: "postback", label: "Check Another Booking", data: "action=booking" }
-        }
-      ]
-    }
-  };
-}
-
-/* =====================================================
    LINE REPLY
 ===================================================== */
 async function replyText(replyToken, text) {
@@ -300,7 +147,49 @@ app.post('/webhook', async (req, res) => {
     if (event.type === 'postback') {
       const params = new URLSearchParams(event.postback.data);
       const action  = params.get("action");
-      const hints   = {
+
+      // กดปุ่ม "Check Booking" จาก Container card → ค้น Booking ทันที
+      if (action === 'lookup_booking') {
+        const bookingNo = params.get("value");
+        if (bookingNo) {
+          const data = await fetchApex(`booking/${encodeURIComponent(bookingNo)}`);
+          const item = getFirstItem(data);
+          if (!item) {
+            await replyText(event.replyToken, `ไม่พบข้อมูล Booking ${bookingNo} ในระบบ`);
+          } else {
+            await replyFlex(event.replyToken, `Booking: ${bookingNo}`, buildBookingFlex(item));
+          }
+        }
+        return res.sendStatus(200);
+      }
+
+      // กดปุ่ม "ประเมินความพอใจ" → แสดง Survey card ให้กดดาว
+      if (action === 'survey') {
+        const refId = params.get("ref") || '';
+        await replyFlex(event.replyToken, 'ประเมินความพอใจ', buildSurveyFlex(refId));
+        return res.sendStatus(200);
+      }
+
+      // กดดาว → บันทึกลง APEX → ตอบขอบคุณ
+      if (action === 'rate') {
+        const score = params.get("score");
+        const ref   = params.get("ref") || '';
+        const stars = '⭐'.repeat(Number(score));
+        try {
+          await axios.post(
+            `${APEX_BASE}/survey`,
+            { user_id: sessionId, score, ref_id: ref },
+            { headers: { "Content-Type": "application/json" }, timeout: 5000 }
+          );
+        } catch (e) { logError(e); }
+        await replyText(event.replyToken,
+          `${stars}\nขอบคุณสำหรับการประเมิน!\nคะแนนของคุณ: ${score}/5`
+        );
+        return res.sendStatus(200);
+      }
+
+      // ปุ่ม "Check another xxx" → แนะนำให้พิมพ์ใหม่
+      const hints = {
         container: "กรุณาพิมพ์หมายเลขตู้ เช่น TCLU8304461",
         booking:   "กรุณาพิมพ์ booking แล้วตามด้วยเลข\nเช่น booking BKK07102025",
         vessel:    "กรุณาพิมพ์ เรือ แล้วตามด้วยชื่อเรือ\nเช่น เรือ Nanhirun"
