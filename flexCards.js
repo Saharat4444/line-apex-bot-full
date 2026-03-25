@@ -152,11 +152,21 @@ function buildVesselFlex(d) {
       ]
     },
     footer: {
-      type: "box", layout: "vertical", paddingAll: "10px",
-      contents: [{
-        type: "button", style: "secondary", color: "#E3E8ED",
-        action: { type: "postback", label: "Check another vessel", data: "action=vessel" }
-      }]
+      type: "box", layout: "vertical", spacing: "sm", paddingAll: "10px",
+      contents: [
+        {
+          type: "button", style: "secondary", color: "#E3E8ED",
+          action: { type: "postback", label: "Check another vessel", data: "action=vessel" }
+        },
+        {
+          type: "button", style: "secondary", color: "#E3E8ED",
+          action: {
+            type: "postback",
+            label: "⭐ ประเมินความพอใจ",
+            data: `action=survey&ref=${encodeURIComponent(d.ship_name || '')}`
+          }
+        }
+      ]
     }
   };
 }
