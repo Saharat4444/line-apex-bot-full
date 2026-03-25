@@ -27,21 +27,21 @@ function hasValue(v) {
 
 /* =====================================================
    CARD — Container detail (IMPORT & EXPORT)
-   Column mapping:
-     CNTR_ID         → header
-     SZ_TY_HT        → Sz/Ty/Ht
-     CATEGORY        → Category
-     STATUS          → Status
-     LOC             → Location (decode V/Y/T/R)
-     VESSEL          → Vessel/Voyage
-     LINE            → Line
-     BOOK_BL         → Bill of Lading (IMPORT) / Booking (EXPORT)
-     HOME_BERTH_TML  → Home Berthing
-     CUSTOM_RELEASED → Hold Status
-     VALID_BEFORE    → PVB (valid_before - 1/86400)
+   Column mapping (ชื่อจริงในตาราง NEDR_CNTR_DETAIL_TRUCK_SN):
+     CNTR_ID        → header
+     SZ_TY_HT       → Sz/Ty/Ht  (size_id||'/'||type_id||'/'||height_id)
+     TRANS_TYPE     → Category  (ไม่ใช่ CATEGORY)
+     STATUS         → Status
+     LOC            → Location  (decode V/Y/T/R)
+     VESSEL         → Vessel/Voyage
+     LINE_ID        → Line      (ไม่ใช่ LINE)
+     BOOK_BL        → CASE WHEN TRANS_TYPE='IMPORT' THEN BL_NO ELSE BOOK_NO
+     HOME_BERTH_TML → Home Berthing
+     ACCOUNT_STATUS → Hold Status (ไม่ใช่ CUSTOM_RELEASED)
+     VALID_BEFORE   → PVB (valid_before - 1/86400)
 ===================================================== */
 function buildContainerFlex(d) {
-  const isImport   = (d.category || '').toUpperCase() === 'IMPORT';
+  const isImport   = (d.trans_type || '').toUpperCase() === 'IMPORT'; // ✅ ใช้ trans_type
   const bookingRef = d.book_bl;
 
   // ปุ่ม footer — มีปุ่ม default เสมอ
@@ -86,14 +86,14 @@ function buildContainerFlex(d) {
           type: "box", layout: "vertical", margin: "md", spacing: "sm",
           contents: [
             row("Sz/Ty/Ht :",      d.sz_ty_ht),
-            row("Category :",      d.category),
+            row("Category :",      d.trans_type),    // ✅ TRANS_TYPE
             row("Status :",        d.status),
             row("Location :",      d.loc),
             row("Vessel/Voyage :", d.vessel),
-            row("Line :",          d.line),
+            row("Line :",          d.line_id),       // ✅ LINE_ID
             row(isImport ? "Bill of Lading :" : "Booking :", d.book_bl),
             row("Home Berthing :", d.home_berth_tml),
-            row("Hold Status :",   d.custom_released),
+            row("Hold Status :",   d.account_status),// ✅ ACCOUNT_STATUS
             row("PVB :",           d.valid_before),
           ]
         },
