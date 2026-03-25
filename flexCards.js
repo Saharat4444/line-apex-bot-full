@@ -43,7 +43,7 @@ function buildContainerFlex(d) {
     type: "button", style: "secondary", color: "#E3E8ED",
     action: {
       type: "postback",
-      label: "⭐ ประเมินความพอใจ",
+      label: "ประเมินความพอใจ",
       data: `action=survey&ref=${encodeURIComponent(d.cntr_id || '')}`
     }
   });
@@ -119,7 +119,7 @@ function buildBookingFlex(d) {
           type: "button", style: "secondary", color: "#E3E8ED",
           action: {
             type: "postback",
-            label: "⭐ ประเมินความพอใจ",
+            label: "ประเมินความพอใจ",
             data: `action=survey&ref=${encodeURIComponent(d.booking_bl || '')}`
           }
         }
@@ -162,7 +162,7 @@ function buildVesselFlex(d) {
           type: "button", style: "secondary", color: "#E3E8ED",
           action: {
             type: "postback",
-            label: "⭐ ประเมินความพอใจ",
+            label: "ประเมินความพอใจ",
             data: `action=survey&ref=${encodeURIComponent(d.ship_name || '')}`
           }
         }
