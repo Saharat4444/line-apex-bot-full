@@ -174,7 +174,7 @@ function buildSurveyFlex(refId = '') {
            : score === 4 ? "#6FA3C7"
            : score === 3 ? "#9FC0DC"
            : score === 2 ? "#C7D9EA"
-           :               "#E6EEF5",
+           :               "#CFD8DC",
       action: {
         type: "postback",
         label: String(score), // ✅ เหลือแค่ตัวเลข
