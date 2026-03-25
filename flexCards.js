@@ -168,6 +168,8 @@ function buildSurveyFlex(refId = '') {
     return {
       type: "button",
       style: "primary",
+      height: "sm",
+      flex: 1, // ✅ ทำให้ปุ่มเท่ากัน
       color: score === 5 ? "#37474F"
            : score === 4 ? "#546E7A"
            : score === 3 ? "#78909C"
@@ -175,7 +177,7 @@ function buildSurveyFlex(refId = '') {
            :               "#CFD8DC",
       action: {
         type: "postback",
-        label,
+        label: String(score),
         data: `action=rate&score=${score}&ref=${encodeURIComponent(refId)}`
       }
     };
@@ -196,22 +198,17 @@ function buildSurveyFlex(refId = '') {
       ]
     },
     footer: {
-      type: "box", layout: "vertical", spacing: "sm", paddingAll: "10px",
+      type: "box",
+      layout: "horizontal",
+      spacing: "sm",
+      paddingAll: "10px",
       contents: [
-        {
-          type: "box", layout: "horizontal", spacing: "sm",
-          contents: [
-            starBtn(1, "⭐ 1"),
-            starBtn(2, "⭐ 2"),
-            starBtn(3, "⭐ 3"),
-          ]
-        },
-        {
-          type: "box", layout: "horizontal", spacing: "sm",
-          contents: [
-            starBtn(4, "⭐⭐ 4"),
-            starBtn(5, "⭐⭐⭐ 5"),
-          ]
+        starBtn(1),
+        starBtn(2),
+        starBtn(3),
+        starBtn(4),
+        starBtn(5)
+         ]
         }
       ]
     }
