@@ -24,7 +24,7 @@ function buildContainerFlex(d) {
   const footerButtons = [
     {
       type: "button", style: "secondary", color: "#E3E8ED",
-      action: { type: "postback", label: "Check another container", data: "action=container" }
+      action: { type: "postback", label: "ตรวจสอบตู้คอนเทนเนอร์อื่น", data: "action=container" }
     }
   ];
 
