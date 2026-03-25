@@ -1,15 +1,7 @@
 /* =====================================================
    flexCards.js
-   รวม Flex Card ทั้งหมด — แก้ design การ์ดที่นี่
-   ถ้าอยากเพิ่มการ์ดใหม่:
-     1. เพิ่ม function buildXxxFlex(d) ที่นี่
-     2. เพิ่มชื่อใน module.exports ด้านล่าง
-     3. import ใน sever.js
 ===================================================== */
 
-/* =====================================================
-   HELPER — row label + value
-===================================================== */
 function row(label, value) {
   return {
     type: "box", layout: "horizontal",
@@ -20,42 +12,25 @@ function row(label, value) {
   };
 }
 
-// ตรวจว่าค่ามีอยู่จริง ไม่ใช่ null หรือ '-'
 function hasValue(v) {
   return v && String(v).trim() !== '' && String(v).trim() !== '-';
 }
 
-/* =====================================================
-   CARD — Container detail (IMPORT & EXPORT)
-   Column mapping (ชื่อจริงในตาราง NEDR_CNTR_DETAIL_TRUCK_SN):
-     CNTR_ID        → header
-     SZ_TY_HT       → Sz/Ty/Ht  (size_id||'/'||type_id||'/'||height_id)
-     TRANS_TYPE     → Category  (ไม่ใช่ CATEGORY)
-     STATUS         → Status
-     LOC            → Location  (decode V/Y/T/R)
-     VESSEL         → Vessel/Voyage
-     LINE_ID        → Line      (ไม่ใช่ LINE)
-     BOOK_BL        → CASE WHEN TRANS_TYPE='IMPORT' THEN BL_NO ELSE BOOK_NO
-     HOME_BERTH_TML → Home Berthing
-     ACCOUNT_STATUS → Hold Status (ไม่ใช่ CUSTOM_RELEASED)
-     VALID_BEFORE   → PVB (valid_before - 1/86400)
-===================================================== */
+/* ================= CONTAINER ================= */
 function buildContainerFlex(d) {
-  const isImport   = (d.trans_type || '').toUpperCase() === 'IMPORT'; // ✅ ใช้ trans_type
+  const isImport   = (d.trans_type || '').toUpperCase() === 'IMPORT';
   const bookingRef = d.book_bl;
 
-  // ปุ่ม footer — มีปุ่ม default เสมอ
   const footerButtons = [
     {
-      type: "button", style: "secondary", color: "#eeeeee",
+      type: "button", style: "secondary", color: "#E3E8ED",
       action: { type: "postback", label: "Check another container", data: "action=container" }
     }
   ];
 
-  // ปุ่มสีเขียว "Check Booking" — แสดงเฉพาะเมื่อ book_bl มีค่าจริง
   if (hasValue(bookingRef)) {
     footerButtons.unshift({
-      type: "button", style: "primary", color: "#00B900",
+      type: "button", style: "primary", color: "#2C5F8A",
       action: {
         type: "postback",
         label: "Check Booking",
@@ -64,9 +39,8 @@ function buildContainerFlex(d) {
     });
   }
 
-  // ปุ่มประเมินความพอใจ
   footerButtons.push({
-    type: "button", style: "secondary", color: "#eeeeee",
+    type: "button", style: "secondary", color: "#E3E8ED",
     action: {
       type: "postback",
       label: "⭐ ประเมินความพอใจ",
@@ -85,16 +59,16 @@ function buildContainerFlex(d) {
         {
           type: "box", layout: "vertical", margin: "md", spacing: "sm",
           contents: [
-            row("Sz/Ty/Ht :",      d.sz_ty_ht),
-            row("Category :",      d.trans_type),    // ✅ TRANS_TYPE
-            row("Status :",        d.status),
-            row("Location :",      d.loc),
+            row("Sz/Ty/Ht :", d.sz_ty_ht),
+            row("Category :", d.trans_type),
+            row("Status :", d.status),
+            row("Location :", d.loc),
             row("Vessel/Voyage :", d.vessel),
-            row("Line :",          d.line_id),       // ✅ LINE_ID
+            row("Line :", d.line_id),
             row(isImport ? "Bill of Lading :" : "Booking :", d.book_bl),
             row("Home Berthing :", d.home_berth_tml),
-            row("Hold Status :",   d.account_status),// ✅ ACCOUNT_STATUS
-            row("PVB :",           d.valid_before),
+            row("Hold Status :", d.account_status),
+            row("PVB :", d.valid_before),
           ]
         },
         { type: "text", text: "PVB : Payment Valid Before", size: "xs", color: "#aaaaaa", margin: "md" }
@@ -107,14 +81,7 @@ function buildContainerFlex(d) {
   };
 }
 
-/* =====================================================
-   CARD — Booking
-   Column mapping:
-     BOOKING_BL       → header
-     VESSEL_NAME      → Vessel  (REGEXP_SUBSTR ส่วนที่ 1)
-     VOYAGE           → Voyage  (REGEXP_SUBSTR ส่วนที่ 2)
-     CONTAINER_COUNT  → Total Containers (COUNT GROUP BY)
-===================================================== */
+/* ================= BOOKING ================= */
 function buildBookingFlex(d) {
   return {
     type: "bubble", size: "mega",
@@ -127,8 +94,8 @@ function buildBookingFlex(d) {
         {
           type: "box", layout: "vertical", margin: "md", spacing: "sm",
           contents: [
-            row("Vessel :",           d.vessel_name),
-            row("Voyage :",           d.voyage),
+            row("Vessel :", d.vessel_name),
+            row("Voyage :", d.voyage),
             row("Total Containers :", String(d.container_count || "-")),
           ]
         },
@@ -141,16 +108,15 @@ function buildBookingFlex(d) {
       type: "box", layout: "vertical", spacing: "sm", paddingAll: "10px",
       contents: [
         {
-          type: "button", style: "primary", color: "#00B900",
+          type: "button", style: "primary", color: "#2C5F8A",
           action: { type: "uri", label: "More Details", uri: "https://uatonline.hutchisonports.co.th" }
         },
         {
-          type: "button", style: "secondary", color: "#eeeeee",
+          type: "button", style: "secondary", color: "#E3E8ED",
           action: { type: "postback", label: "Check Another Booking", data: "action=booking" }
         },
-        // ✅ ปุ่มประเมินความพอใจ — ส่ง booking_bl เป็น refId
         {
-          type: "button", style: "secondary", color: "#eeeeee",
+          type: "button", style: "secondary", color: "#E3E8ED",
           action: {
             type: "postback",
             label: "⭐ ประเมินความพอใจ",
@@ -162,17 +128,7 @@ function buildBookingFlex(d) {
   };
 }
 
-/* =====================================================
-   CARD — Vessel Schedule
-   Column mapping:
-     SHIP_NAME           → header
-     VOYAGE_CODE         → Voyage Code  (SHIPS_ID)
-     ARRIVES_IN_TERMINAL → Arrives in Terminal (ARR)
-     ETA                 → Estimated Arrival
-     DEP                 → Estimate Departure
-     CLOSING             → Closing (CARGO_CUTOFF)
-     CURRENTLY_IN_PORT   → Currently in Port (BERTH)
-===================================================== */
+/* ================= VESSEL ================= */
 function buildVesselFlex(d) {
   return {
     type: "bubble", size: "mega",
@@ -185,12 +141,12 @@ function buildVesselFlex(d) {
         {
           type: "box", layout: "vertical", margin: "md", spacing: "sm",
           contents: [
-            row("Voyage Code :",         d.voyage_code),
+            row("Voyage Code :", d.voyage_code),
             row("Arrives in Terminal :", d.arrives_in_terminal),
-            row("Estimated Arrival :",   d.eta),
-            row("Estimate Departure :",  d.dep),
-            row("Closing :",             d.closing),
-            row("Currently in Port :",   d.currently_in_port),
+            row("Estimated Arrival :", d.eta),
+            row("Estimate Departure :", d.dep),
+            row("Closing :", d.closing),
+            row("Currently in Port :", d.currently_in_port),
           ]
         }
       ]
@@ -198,29 +154,25 @@ function buildVesselFlex(d) {
     footer: {
       type: "box", layout: "vertical", paddingAll: "10px",
       contents: [{
-        type: "button", style: "secondary", color: "#eeeeee",
+        type: "button", style: "secondary", color: "#E3E8ED",
         action: { type: "postback", label: "Check another vessel", data: "action=vessel" }
       }]
     }
   };
 }
 
-/* =====================================================
-   CARD — Satisfaction Survey (กดดาว 1-5)
-   refId = หมายเลขตู้ / booking ที่อ้างอิง
-===================================================== */
+/* ================= SURVEY ================= */
 function buildSurveyFlex(refId = '') {
-  const refLabel = refId ? `\nอ้างอิง: ${refId}` : '';
 
   function starBtn(score, label) {
     return {
       type: "button",
-      style: score >= 4 ? "primary" : "secondary",
-      color: score === 5 ? "#FF9500"
-           : score === 4 ? "#FFCC00"
-           : score === 3 ? "#8BC34A"
-           : score === 2 ? "#78909C"
-           :               "#B0BEC5",
+      style: "primary",
+      color: score === 5 ? "#37474F"
+           : score === 4 ? "#546E7A"
+           : score === 3 ? "#78909C"
+           : score === 2 ? "#B0BEC5"
+           :               "#CFD8DC",
       action: {
         type: "postback",
         label,
@@ -238,14 +190,6 @@ function buildSurveyFlex(refId = '') {
           color: "#333333", align: "center" },
         { type: "text", text: "กรุณาให้คะแนนการบริการ",
           size: "sm", color: "#aaaaaa", align: "center", wrap: true, margin: "sm" },
-        // แสดง refId เฉพาะเมื่อมีค่า
-        ...(refId ? [{
-          type: "box", layout: "horizontal", margin: "sm",
-          contents: [
-            { type: "text", text: "อ้างอิง:", size: "xs", color: "#aaaaaa", flex: 3 },
-            { type: "text", text: refId, size: "xs", weight: "bold", color: "#333333", flex: 7, wrap: true }
-          ]
-        }] : []),
         { type: "separator", margin: "lg" },
         { type: "text", text: "1 = น้อยที่สุด   5 = มากที่สุด",
           size: "xs", color: "#aaaaaa", align: "center", margin: "md" },
@@ -274,10 +218,6 @@ function buildSurveyFlex(refId = '') {
   };
 }
 
-/* =====================================================
-   EXPORTS
-   ถ้าเพิ่มการ์ดใหม่ → เพิ่มชื่อ function ที่นี่ด้วย
-===================================================== */
 module.exports = {
   buildContainerFlex,
   buildBookingFlex,
