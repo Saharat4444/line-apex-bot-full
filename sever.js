@@ -77,19 +77,29 @@ function detectSearchType(text) {
   const containerMatch = upper.match(/\b([A-Z]{4}[0-9]{7})\b/);
   if (containerMatch) return { type: 'container', value: containerMatch[1] };
 
-  // Vessel: "เรือ xxx" หรือ "vessel xxx"
+  // Vessel: "เรือ xxx" หรือ "vessel xxx" (มี prefix)
   if (/^(เรือ|vessel)\s+/i.test(text.trim())) {
     const shipName = text.trim().replace(/^(เรือ|vessel)\s+/i, '').trim();
     if (shipName) return { type: 'vessel', value: shipName };
   }
 
-  // Booking/BL: "booking xxx" หรือ "bl xxx" หรือ pattern BKKxxxxxxxx
+  // Booking/BL: "booking xxx" หรือ "bl xxx" (มี prefix)
   if (/^(booking|bl)\s+/i.test(text.trim())) {
     const bookNo = text.trim().replace(/^(booking|bl)\s+/i, '').trim();
     if (bookNo) return { type: 'booking', value: bookNo };
   }
+
+  // Booking pattern: ตัวอักษร 2-4 ตัว + ตัวเลข 6-10 ตัว (ไม่มีช่องว่าง)
   const bookingMatch = upper.match(/^([A-Z]{2,4}[0-9]{6,10})$/);
   if (bookingMatch) return { type: 'booking', value: bookingMatch[1] };
+
+  // Vessel: ถ้าข้อความเป็นตัวอังกฤษล้วน (+ ช่องว่าง ตัวเลข /)
+  // เช่น "NANHIRUN", "EVER BRAVE", "NP LOVEGISTICS 1", "RACHA BHUM"
+  // pattern: มีแต่ A-Z ช่องว่าง ตัวเลข และ / ความยาว 3+ ตัว
+  // ไม่มีภาษาไทยเลย → น่าจะเป็นชื่อเรือ
+  if (/^[A-Z0-9 /]{3,}$/.test(upper) && /[A-Z]{2,}/.test(upper)) {
+    return { type: 'vessel', value: text.trim() };
+  }
 
   return { type: 'dialogflow', value: text };
 }
