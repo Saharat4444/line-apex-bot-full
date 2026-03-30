@@ -131,17 +131,18 @@ function buildBookingFlex(d) {
 /* ================= VESSEL ================= */
 // row() เดิมไม่ต้องแตะเลย ปล่อยไว้ให้ card อื่นใช้
 
-function rowVertical(label, value) {  // ← function ใหม่สำหรับ vessel เท่านั้น
+function rowVertical(label, value) {
   return {
-    type: "box", layout: "vertical", spacing: "xs",
+    type: "box", layout: "horizontal", spacing: "sm",
     contents: [
       {
         type: "text", text: label,
-        size: "xs", color: "#888888", wrap: true
+        size: "sm", color: "#888888", wrap: true, flex: 2
       },
       {
         type: "text", text: value || "-",
-        size: "sm", color: "#111111", weight: "bold", wrap: true
+        size: "sm", color: "#111111", weight: "bold", wrap: true, flex: 3,
+        align: "end"
       }
     ]
   };
