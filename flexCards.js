@@ -197,7 +197,7 @@ function buildSurveyFlex(refId = '') {
       style: "secondary",
       height: "sm",
       flex: 1, // ✅ ทำให้ปุ่มเท่ากัน
-      color: score === 5 ? "#8FBBD6"
+      color: score === 5 ? "#7FAECC"
            : score === 4 ? "#6FA3C7"
            : score === 3 ? "#9FC0DC"
            : score === 2 ? "#C7D9EA"
