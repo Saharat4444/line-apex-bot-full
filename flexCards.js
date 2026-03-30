@@ -194,10 +194,10 @@ function buildSurveyFlex(refId = '') {
   function starBtn(score) {
     return {
       type: "button",
-      style: "primary",
+      style: "secondary",
       height: "sm",
       flex: 1, // ✅ ทำให้ปุ่มเท่ากัน
-      color: score === 5 ? "#2C5F8A"
+      color: score === 5 ? "#8FBBD6"
            : score === 4 ? "#6FA3C7"
            : score === 3 ? "#9FC0DC"
            : score === 2 ? "#C7D9EA"
@@ -218,10 +218,10 @@ function buildSurveyFlex(refId = '') {
         { type: "text", text: "ประเมินความพอใจ", weight: "bold", size: "lg",
           color: "#333333", align: "center" },
         { type: "text", text: "กรุณาให้คะแนนการบริการ",
-          size: "sm", color: "#aaaaaa", align: "center", wrap: true, margin: "sm" },
+          size: "sm", color: "#333333", align: "center", wrap: true, margin: "sm" },
         { type: "separator", margin: "lg" },
         { type: "text", text: "1 = น้อยที่สุด   5 = มากที่สุด",
-          size: "xs", color: "#aaaaaa", align: "center", margin: "md" },
+          size: "xs", color: "#333333", align: "center", margin: "md" },
       ]
     },
     footer: {
