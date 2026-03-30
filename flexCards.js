@@ -142,7 +142,6 @@ function rowVertical(label, value) {
       {
         type: "text", text: value || "-",
         size: "sm", weight: "bold", wrap: true, flex: 2,
-        align: "end"
       }
     ]
   };
