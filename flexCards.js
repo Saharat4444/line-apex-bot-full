@@ -129,6 +129,24 @@ function buildBookingFlex(d) {
 }
 
 /* ================= VESSEL ================= */
+// row() เดิมไม่ต้องแตะเลย ปล่อยไว้ให้ card อื่นใช้
+
+function rowVertical(label, value) {  // ← function ใหม่สำหรับ vessel เท่านั้น
+  return {
+    type: "box", layout: "vertical", spacing: "xs",
+    contents: [
+      {
+        type: "text", text: label,
+        size: "xs", color: "#888888", wrap: true
+      },
+      {
+        type: "text", text: value || "-",
+        size: "sm", color: "#111111", weight: "bold", wrap: true
+      }
+    ]
+  };
+}
+
 function buildVesselFlex(d) {
   return {
     type: "bubble", size: "mega",
@@ -141,12 +159,12 @@ function buildVesselFlex(d) {
         {
           type: "box", layout: "vertical", margin: "md", spacing: "sm",
           contents: [
-            row("Voyage Code :", d.voyage_code),
-            row("Arrives in Terminal :", d.arrives_in_terminal),
-            row("Estimated Arrival :", d.eta),
-            row("Estimate Departure :", d.dep),
-            row("Closing :", d.closing),
-            row("Currently in Port :", d.currently_in_port),
+            rowVertical("Voyage Code :", d.voyage_code),       // ← เปลี่ยนเป็น rowVertical
+            rowVertical("Arrives in Terminal :", d.arrives_in_terminal),
+            rowVertical("Estimated Arrival :", d.eta),
+            rowVertical("Estimate Departure :", d.dep),
+            rowVertical("Closing :", d.closing),
+            rowVertical("Currently in Port :", d.currently_in_port),
           ]
         }
       ]
