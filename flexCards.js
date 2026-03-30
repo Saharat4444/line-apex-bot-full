@@ -137,11 +137,11 @@ function rowVertical(label, value) {
     contents: [
       {
         type: "text", text: label,
-        size: "sm", color: "#888888", wrap: true, flex: 2
+        size: "sm", color: "#888888", flex: 2
       },
       {
         type: "text", text: value || "-",
-        size: "sm", color: "#111111", weight: "bold", wrap: true, flex: 3,
+        size: "sm", weight: "bold", wrap: true, flex: 3,
         align: "end"
       }
     ]
