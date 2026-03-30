@@ -137,17 +137,16 @@ function rowVertical(label, value) {
     contents: [
       {
         type: "text", text: label,
-        size: "sm", color: "#888888", flex: 2
+        size: "sm", color: "#888888", wrap: true, flex: 3
       },
       {
         type: "text", text: value || "-",
-        size: "sm", weight: "bold", wrap: true, flex: 3,
+        size: "sm", weight: "bold", wrap: true, flex: 2,
         align: "end"
       }
     ]
   };
 }
-
 function buildVesselFlex(d) {
   return {
     type: "bubble", size: "mega",
